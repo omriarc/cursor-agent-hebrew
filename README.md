@@ -1,5 +1,7 @@
 # Cursor Agent Hebrew
 
+[עברית](README.he.md)
+
 Hebrew in the Cursor Agent terminal reads from right to left. English stays on the left.
 
 Agent paints its screen one cell at a time, left to right. Hebrew is stored with the first letter first, so a word like `היי` was landing with `ה` on the left. This launcher reorders those cells with the Unicode bidirectional algorithm just before they are drawn.
