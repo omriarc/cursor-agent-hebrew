@@ -17,11 +17,18 @@ const hook =
   JSON.stringify(reorderPath) +
   ").reorderString;\n";
 const marker = "__hebrewReorderCells";
-const needle1 = "const o=k(Q(r));let c=i;for(const t of o){";
-const repl1 = "const o=globalThis.__hebrewReorderCells(k(Q(r)));let c=i;for(const t of o){";
+// Minifiers rename the locals. The shape of Ink's screen-buffer loop stays put.
+const cellLoop =
+  /const ([\w$]+)=k\(([\w$]+)\(r\)\);let c=i;for\(const t of \1\)\{/;
+const cellLoopRepl =
+  "const $1=globalThis.__hebrewReorderCells(k($2(r)));let c=i;for(const t of $1){";
 const needle2 = 'n+=" ".repeat(r)+e.text,t+=r';
 const repl2 = 'n+=" ".repeat(r)+globalThis.__hebrewReorderString(e.text),t+=r';
 const banner = "/*! For license information please see index.js.LICENSE.txt */\n";
+
+function occurrences(source, re) {
+  return source.match(new RegExp(re.source, "g"))?.length ?? 0;
+}
 
 let source;
 try {
@@ -40,7 +47,9 @@ if (source.includes(marker)) {
   process.exit(0);
 }
 
-if (!source.startsWith(banner) || !source.includes(needle1) || !source.includes(needle2)) {
+const cellHits = occurrences(source, cellLoop);
+const textHits = source.split(needle2).length - 1;
+if (!source.startsWith(banner) || cellHits !== 1 || textHits !== 1) {
   console.error("cursor-hebrew: this Agent build renders text differently, Hebrew was left unchanged");
   process.exit(0);
 }
@@ -49,6 +58,6 @@ const backup = path.join(versionDir, "index.js.hebrew-bidi-backup");
 if (!fs.existsSync(backup)) fs.copyFileSync(indexPath, backup);
 
 let next = banner + hook + source.slice(banner.length);
-next = next.replace(needle1, repl1);
+next = next.replace(cellLoop, cellLoopRepl);
 next = next.replace(needle2, repl2);
 fs.writeFileSync(indexPath, next);
